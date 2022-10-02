@@ -10,17 +10,19 @@ the soloution to the maze.
 
 '''
 
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 800
+SCREEN_WIDTH = 1000
+SCREEN_HEIGHT = 1000
 
-MAZE_WIDTH = 30
-MAZE_HEIGHT = 30
+MAZE_WIDTH = 100
+MAZE_HEIGHT = 100
 
 
 
 PURPLE = (113, 4, 196)
 BLACK = (0,0,0)
 DESERT_TAN = (196, 192, 167)
+LIGHT_GREEN = (204,255,229)
+END_RED = (255,12,12)
 
 
 #(width, height)
@@ -39,7 +41,11 @@ def rect_select(direction: str, x: int, y: int, width: int, height:int) -> pygam
         case 'W':           # left-tangle
             return pygame.Rect(x-width, y, 2*width, height)    
 
-
+def draw_start_end_blocks(surface: pygame.Surface):
+    s = pygame.Rect(0, 0, MAZE_BLOCK_WIDTH-1, MAZE_BLOCK_HEIGHT-1)
+    e = pygame.Rect((MAZE_WIDTH-1) * MAZE_BLOCK_WIDTH, (MAZE_HEIGHT-1)*MAZE_BLOCK_HEIGHT, MAZE_BLOCK_WIDTH-1, MAZE_BLOCK_HEIGHT-1)
+    pygame.draw.rect(surface, LIGHT_GREEN, s)
+    pygame.draw.rect(surface, END_RED, e)
 def draw_maze_bg(surface: pygame.Surface):
     print("BG DRAW")
     for i in range(0,MAZE_HEIGHT):
@@ -52,6 +58,9 @@ def draw_maze_bg(surface: pygame.Surface):
             pygame.draw.rect(surface, DESERT_TAN, r)
             #pygame.time.wait(1)
             #pygame.display.update()
+    draw_start_end_blocks(surface)
+
+
     print("BG DRAW COMPLETE")
   
 def is_valid_move(status_arr, x,y):
@@ -61,10 +70,6 @@ def is_valid_move(status_arr, x,y):
 
 def mock_valid_random_move(status_arr: List[List[int]], curr_x :int, curr_y:int) -> Tuple[int,int,str]:
     DIRECTIONS_SET = ["N","S","E","W"]
-
-
-
-
     while(True):
         if not DIRECTIONS_SET:
             return (-1,-1, None)
@@ -90,16 +95,18 @@ def get_gridspace(status_arr: List[List[int]], curr_x: int, curr_y: int) -> int:
 
 def set_gridspace(status_arr: List[List[int]], curr_x: int, curr_y: int):
     status_arr[curr_y][curr_x] = 1
+
 def draw_solution(surface: pygame.Surface, path: List[Tuple[int,int]]):
+    print("Drawing this path: ", path)
     for x,y in path:
         r = pygame.Rect(x*MAZE_BLOCK_WIDTH, y*MAZE_BLOCK_HEIGHT, MAZE_BLOCK_WIDTH-1, MAZE_BLOCK_HEIGHT-1)
-        pygame.draw.rect(surface, PURPLE, r)
+        pygame.draw.rect(surface, LIGHT_GREEN, r)
         pygame.time.wait(1)
         pygame.display.update()
-
+    print("solution drawn")
 
 def do_dfs(surface: pygame.Surface):
-    possible_soloution_path = []
+    FINAL_PATH = None
     status = [[ 0 for j in range(MAZE_HEIGHT)] for i in range(MAZE_WIDTH)]
     stack = []
     curr_x, curr_y = 0,0
@@ -109,9 +116,6 @@ def do_dfs(surface: pygame.Surface):
     status[MAZE_HEIGHT-1][MAZE_WIDTH-1] = "E"
     while(stack):
         new_curr_x, new_curr_y, direction = mock_valid_random_move(status, curr_x, curr_y)
-        if (new_curr_x, new_curr_y) == (MAZE_WIDTH - 1, MAZE_HEIGHT - 1):
-            print("PATH", path_up_to)
-            draw_solution(surface, path_up_to)
         if (new_curr_x, new_curr_y) == (-1,-1): #aka no valid move, must backtrack4
             #print(f"no_valid_moves from x:{curr_x} y:{curr_y}")
                                          # go to last known valid point
@@ -125,19 +129,22 @@ def do_dfs(surface: pygame.Surface):
         stack.append([new_curr_x, new_curr_y, path_up_to.copy()])          #make that move
         set_gridspace(status, new_curr_x, new_curr_y)   #make that move cont
 
-        #for row in status:
-        #    print(row)
-        # print("nexxt")
         # draw the lines here aka break the walls
         # depending on the move, which is known to be valid at this point
         # {N,S,E,W} ---> draw the corresponding rectangle {center-up, center-down, fcenter-right, center-left}
-        
+
         r = rect_select(direction, curr_x * MAZE_BLOCK_WIDTH, curr_y * MAZE_BLOCK_HEIGHT, MAZE_BLOCK_WIDTH - 1, MAZE_BLOCK_HEIGHT - 1)
         pygame.draw.rect(surface, DESERT_TAN, r)    #draw the rect from old to new old location
+        draw_start_end_blocks(surface)
         pygame.display.update()
+        if (new_curr_x, new_curr_y) == (MAZE_WIDTH - 1, MAZE_HEIGHT - 1) and FINAL_PATH ==  None: #aka we hit the bottom right
+            print("PATH to destination", path_up_to)
+            FINAL_PATH = path_up_to.copy()
+            #draw_solution(surface, path_up_to)
         #pygame.time.wait(0.1)
 
         curr_x, curr_y = new_curr_x, new_curr_y     #update the old to be the new, then continue
+    draw_solution(surface, FINAL_PATH)
 if __name__ == '__main__': 
     pygame.init()
     surface = pygame.display.set_mode((SCREEN_WIDTH,SCREEN_HEIGHT))
